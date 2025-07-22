@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     AliquotaIVA, ModalitaPagamento,
-    Cliente, Fornitore, Dipendente
+    Cliente, Fornitore, Dipendente, Cantiere
 )
 
 @admin.register(AliquotaIVA)
@@ -99,6 +99,35 @@ class DipendenteAdmin(admin.ModelAdmin):
         }),
         ('Dati Lavorativi', {
             'fields': ('mansione', 'data_assunzione', 'data_fine_rapporto', 'costo_orario', 'note_generali')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(Cantiere)
+class CantiereAdmin(admin.ModelAdmin):
+    list_display = ('codice_cantiere', 'descrizione', 'cliente', 'stato', 'data_inizio')
+    search_fields = ('codice_cantiere', 'descrizione', 'cliente__nome_cognome_ragione_sociale')
+    list_filter = ('stato', 'cliente')
+    exclude = ('created_by', 'updated_by')
+    
+    fieldsets = (
+        ('Informazioni Principali', {
+            'fields': (
+                ('codice_cantiere', 'stato'),
+                'descrizione',
+                'cliente'
+            )
+        }),
+        ('Dettagli Logistici', {
+            'fields': ('indirizzo',)
+        }),
+        ('Date', {
+            'fields': ('data_inizio', 'data_fine_prevista', 'data_chiusura_effettiva')
         }),
     )
 

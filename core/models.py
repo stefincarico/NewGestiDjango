@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 
-# NOTA: Questo è il nostro modello base astratto per non ripetere il codice.
 class TenantBaseModel(models.Model):
     attivo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -11,8 +10,6 @@ class TenantBaseModel(models.Model):
 
     class Meta:
         abstract = True # Dice a Django di non creare una tabella per questo modello.
-
-# --- Iniziamo con alcune semplici tabelle di configurazione ---
 
 class AliquotaIVA(TenantBaseModel):
     descrizione = models.CharField(max_length=100, unique=True)
@@ -43,7 +40,6 @@ class ModalitaPagamento(TenantBaseModel):
 
 # === ANAGRAFICHE ===
 # Questo è il modello genitore che contiene tutti i campi comuni.
-
 class Anagrafica(TenantBaseModel):
     nome_cognome_ragione_sociale = models.CharField(max_length=255)
     codice_fiscale = models.CharField(max_length=16, blank=True, help_text="Valido sia per persone fisiche che giuridiche")
@@ -80,21 +76,17 @@ class Anagrafica(TenantBaseModel):
     def __str__(self):
         return self.nome_cognome_ragione_sociale
 
-
 # --- Modelli Figli ---
 # Ognuno eredita tutti i campi da Anagrafica e aggiunge i suoi specifici.
-
 class Cliente(Anagrafica):
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clienti"
 
-
 class Fornitore(Anagrafica):
     class Meta:
         verbose_name = "Fornitore"
         verbose_name_plural = "Fornitori"
-
 
 class Dipendente(Anagrafica):
     # Qui mettiamo i campi che erano in 'DipendenteDettaglio'
@@ -107,3 +99,49 @@ class Dipendente(Anagrafica):
     class Meta:
         verbose_name = "Dipendente"
         verbose_name_plural = "Dipendenti"
+
+# === CANTIERI / PROGETTI ===
+class Cantiere(TenantBaseModel):
+    class Stato(models.TextChoices):
+        BOZZA = 'Bozza', 'Bozza'
+        APERTO = 'Aperto', 'Aperto'
+        SOSPESO = 'Sospeso', 'Sospeso'
+        CHIUSO = 'Chiuso', 'Chiuso'
+        ANNULLATO = 'Annullato', 'Annullato'
+
+    codice_cantiere = models.CharField(
+        max_length=50,  # Aumentiamo un po' la lunghezza
+        unique=True, 
+        help_text="Es. C-2025-ROMA-001"
+    )
+    descrizione = models.CharField(max_length=255)
+    indirizzo = models.CharField(max_length=255, blank=True)
+
+    # La relazione chiave!
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.PROTECT, 
+        help_text="Il cliente a cui è associato il cantiere"
+    )
+
+    data_inizio = models.DateField(null=True, blank=True)
+    data_fine_prevista = models.DateField(null=True, blank=True)
+    data_chiusura_effettiva = models.DateField(null=True, blank=True)
+    
+    stato = models.CharField(max_length=20, choices=Stato.choices, default=Stato.BOZZA)
+
+    def __str__(self):
+        return f"[{self.codice_cantiere}] {self.descrizione}"
+
+    def save(self, *args, **kwargs):
+        self.codice_cantiere = self.codice_cantiere.upper()
+        self.descrizione = self.descrizione.upper()
+        if self.indirizzo:
+            self.indirizzo = self.indirizzo.title()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Cantiere"
+        verbose_name_plural = "Cantieri"
+        ordering = ['-data_inizio']
+
