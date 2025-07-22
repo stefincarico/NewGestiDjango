@@ -5,6 +5,7 @@ from .models import (
     Cliente, Fornitore, Dipendente,
     Cantiere, DocumentoTestata, DocumentoRiga 
 )
+from generic_helpers.admin import GenericRelationModelAdmin
 
 @admin.register(AliquotaIVA)
 class AliquotaIVAAdmin(admin.ModelAdmin):
@@ -146,11 +147,13 @@ class DocumentoRigaInline(admin.TabularInline):
     readonly_fields = ('imponibile_riga', 'iva_riga') # Mostra i totali di riga ma non li rende modificabili
     extra = 1 # Mostra sempre una riga vuota per l'inserimento
 
-#@admin.register(DocumentoTestata)
+@admin.register(DocumentoTestata)
 class DocumentoTestataAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'content_object', 'stato', 'totale')
     list_filter = ('stato', 'tipo_documento', 'data_documento')
     search_fields = ('numero_documento',) 
+
+    raw_id_fields = ('object_id',)
     
     readonly_fields = ('imponibile', 'iva', 'totale', 'numero_documento', 'created_at', 'updated_at', 'created_by', 'updated_by')
     inlines = [DocumentoRigaInline]

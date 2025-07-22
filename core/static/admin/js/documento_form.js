@@ -1,40 +1,42 @@
 // in core/static/admin/js/documento_form.js
-
 window.addEventListener('load', function() {
     (function($) {
         const tipoDocSelect = $('#id_tipo_documento');
-        const contentTypeSelect = $('#id_content_type');
+        const contentTypeRow = $('.form-row.field-content_type');
         const objectIdRow = $('.form-row.field-object_id');
+        const contentTypeSelect = contentTypeRow.find('select');
 
-        function updateContactType() {
+        function updateContactFields() {
             const tipoDoc = tipoDocSelect.val();
-            let targetModel = null;
+            let targetModelName = null;
 
-            if (tipoDoc.includes('Vendita')) {
-                targetModel = 'cliente';
-            } else if (tipoDoc.includes('Acquisto')) {
-                targetModel = 'fornitore';
+            if (tipoDoc && tipoDoc.includes('Vendita')) {
+                targetModelName = 'cliente';
+            } else if (tipoDoc && tipoDoc.includes('Acquisto')) {
+                targetModelName = 'fornitore';
             }
 
-            if (targetModel) {
-                // Trova l'option che contiene il nome del modello target
-                const optionToSelect = contentTypeSelect.find('option:contains(' + targetModel + ')');
-                if (optionToSelect.length > 0) {
-                    contentTypeSelect.val(optionToSelect.val());
-                    // Nascondi il selettore del content type perché la scelta è automatica
-                    $('.form-row.field-content_type').hide();
+            if (targetModelName) {
+                const option = contentTypeSelect.find('option').filter(function() {
+                    return $(this).text().toLowerCase().includes(targetModelName);
+                });
+                
+                if (option.length) {
+                    contentTypeSelect.val(option.val());
+                    contentTypeRow.hide();
                     objectIdRow.show();
                 }
             } else {
-                 // Se non è né vendita né acquisto, mostra tutto
-                 $('.form-row.field-content_type').show();
-                 objectIdRow.hide();
+                // Se non c'è un tipo documento o non è né vendita né acquisto
+                contentTypeRow.show();
+                objectIdRow.hide();
+                // Resetta il valore per evitare selezioni residue
+                contentTypeSelect.val('');
             }
         }
 
-        // Lega la funzione all'evento change e eseguila subito
-        tipoDocSelect.on('change', updateContactType);
-        updateContactType();
+        tipoDocSelect.on('change', updateContactFields);
+        updateContactFields(); // Esegui al caricamento
 
     })(django.jQuery);
 });

@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'generic_helpers',
     'core',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -139,5 +140,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
+    # Questo dice a Django di cercare anche nella cartella 'static' dell'app 'core'
+    BASE_DIR / "core/static", 
 ]
