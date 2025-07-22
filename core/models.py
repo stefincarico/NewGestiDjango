@@ -212,6 +212,7 @@ class DocumentoRiga(models.Model):
         return self.descrizione
 
     def save(self, *args, **kwargs):
+        self.descrizione = self.descrizione.upper()
         self.imponibile_riga = self.quantita * self.prezzo_unitario
         moltiplicatore_iva = self.aliquota_iva.valore_percentuale / 100
         self.iva_riga = self.imponibile_riga * moltiplicatore_iva
