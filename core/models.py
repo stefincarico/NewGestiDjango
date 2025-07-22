@@ -186,7 +186,6 @@ class DocumentoTestata(TenantBaseModel):
         verbose_name = "Documento"
         verbose_name_plural = "Documenti"
 
-
 class DocumentoRiga(models.Model):
     testata = models.ForeignKey(DocumentoTestata, on_delete=models.CASCADE, related_name='righe')
     
@@ -212,3 +211,64 @@ class DocumentoRiga(models.Model):
     class Meta:
         verbose_name = "Riga Documento"
         verbose_name_plural = "Righe Documento"
+
+# === SCADENZIARIO ===
+
+class Scadenza(TenantBaseModel):
+    class TipoScadenza(models.TextChoices):
+        INCASSO = 'Incasso', 'Incasso (da Cliente)'
+        PAGAMENTO = 'Pagamento', 'Pagamento (a Fornitore)'
+
+    class StatoScadenza(models.TextChoices):
+        APERTA = 'Aperta', 'Aperta'
+        PAGATA_PARZIALMENTE = 'Parziale', 'Pagata Parzialmente'
+        SALDATA = 'Saldata', 'Saldata'
+        ANNULLATA = 'Annullata', 'Annullata'
+
+    # Collegamento al documento che ha generato la scadenza
+    documento = models.ForeignKey(DocumentoTestata, on_delete=models.CASCADE, related_name='scadenze')
+    
+    # Relazione generica per sapere a chi si riferisce la scadenza (cliente o fornitore)
+    content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT)
+    object_id = models.PositiveIntegerField()
+    anagrafica = GenericForeignKey('content_type', 'object_id')
+
+    # Campi descrittivi
+    tipo_scadenza = models.CharField(max_length=20, choices=TipoScadenza.choices)
+    stato = models.CharField(max_length=20, choices=StatoScadenza.choices, default=StatoScadenza.APERTA)
+    
+    # Campi economici
+    data_scadenza = models.DateField()
+    importo = models.DecimalField(max_digits=10, decimal_places=2)
+    importo_pagato = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    note = models.TextField(blank=True)
+    
+    # --- Campi Calcolati (Properties) ---
+    
+    @property
+    def importo_residuo(self):
+        """Calcola al volo l'importo ancora da saldare."""
+        return self.importo - self.importo_pagato
+        
+    @property
+    def is_scaduta(self):
+        """Restituisce True se la data di scadenza è passata e non è ancora saldata."""
+        from django.utils import timezone
+        oggi = timezone.now().date()
+        stati_aperti = [self.StatoScadenza.APERTA, self.StatoScadenza.PAGATA_PARZIALMENTE]
+        
+        if self.data_scadenza < oggi and self.stato in stati_aperti:
+            return True
+        return False
+
+    # --- Rappresentazione e Ordinamento ---
+
+    def __str__(self):
+        return f"{self.get_tipo_scadenza_display()} di {self.importo} EUR del {self.data_scadenza}"
+
+    class Meta:
+        verbose_name = "Scadenza"
+        verbose_name_plural = "Scadenze"
+        ordering = ['data_scadenza']
+
