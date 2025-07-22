@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class TenantBaseModel(models.Model):
     attivo = models.BooleanField(default=True)
@@ -144,4 +146,77 @@ class Cantiere(TenantBaseModel):
         verbose_name = "Cantiere"
         verbose_name_plural = "Cantieri"
         ordering = ['-data_inizio']
+# === DOCUMENTI (FATTURAZIONE) - VERSIONE SCALABILE ===
 
+class DocumentoTestata(TenantBaseModel):
+    class TipoDocumento(models.TextChoices):
+        FATTURA_VENDITA = 'FatturaVendita', 'Fattura di Vendita'
+        NOTA_CREDITO_VENDITA = 'NotaCreditoVendita', 'Nota di Credito di Vendita'
+        FATTURA_ACQUISTO = 'FatturaAcquisto', 'Fattura di Acquisto'
+        NOTA_CREDITO_ACQUISTO = 'NotaCreditoAcquisto', 'Nota di Credito di Acquisto'
+    
+    class StatoDocumento(models.TextChoices):
+        BOZZA = 'Bozza', 'Bozza'
+        CONFERMATO = 'Confermato', 'Confermato'
+        ANNULLATO = 'Annullato', 'Annullato'
+
+    tipo_documento = models.CharField(max_length=30, choices=TipoDocumento.choices)
+    stato = models.CharField(max_length=20, choices=StatoDocumento.choices, default=StatoDocumento.BOZZA)
+    
+    # --- LA RELAZIONE GENERICA ---
+    # Definiamo i limiti: quali modelli possono essere collegati?
+    limit_choices = models.Q(app_label='core', model='cliente') | models.Q(app_label='core', model='fornitore')
+    
+    content_type = models.ForeignKey(
+        ContentType, 
+        on_delete=models.PROTECT,
+        limit_choices_to=limit_choices
+    )
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    # -----------------------------
+
+    cantiere = models.ForeignKey(Cantiere, on_delete=models.PROTECT, related_name='documenti', null=True, blank=True)
+    modalita_pagamento = models.ForeignKey(ModalitaPagamento, on_delete=models.PROTECT, null=True, blank=True)
+
+    numero_documento = models.CharField(max_length=50)
+    data_documento = models.DateField()
+    
+    imponibile = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    iva = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    totale = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    note = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.get_tipo_documento_display()} N. {self.numero_documento} del {self.data_documento}"
+
+    class Meta:
+        verbose_name = "Documento"
+        verbose_name_plural = "Documenti"
+
+
+class DocumentoRiga(models.Model):
+    testata = models.ForeignKey(DocumentoTestata, on_delete=models.CASCADE, related_name='righe')
+    
+    descrizione = models.CharField(max_length=255)
+    quantita = models.DecimalField(max_digits=10, decimal_places=2, default=1.00)
+    prezzo_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    aliquota_iva = models.ForeignKey(AliquotaIVA, on_delete=models.PROTECT)
+
+    imponibile_riga = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
+    iva_riga = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, editable=False)
+    
+    def __str__(self):
+        return self.descrizione
+
+    def save(self, *args, **kwargs):
+        self.imponibile_riga = self.quantita * self.prezzo_unitario
+        moltiplicatore_iva = self.aliquota_iva.valore_percentuale / 100
+        self.iva_riga = self.imponibile_riga * moltiplicatore_iva
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Riga Documento"
+        verbose_name_plural = "Righe Documento"
