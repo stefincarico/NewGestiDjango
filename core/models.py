@@ -272,3 +272,36 @@ class Scadenza(TenantBaseModel):
         verbose_name_plural = "Scadenze"
         ordering = ['data_scadenza']
 
+# === TESORERIA E CONTABILITA' ===
+
+class ContoFinanziario(TenantBaseModel):
+    """ Rappresenta un conto dove risiede la liquidità (es. Banca, Cassa). """
+    nome_conto = models.CharField(max_length=100, unique=True)
+    
+    # Potremmo aggiungere qui il saldo iniziale, ma per ora lo manteniamo semplice
+    # saldo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return self.nome_conto
+
+    class Meta:
+        verbose_name = "Conto Finanziario"
+        verbose_name_plural = "Conti Finanziari"
+
+
+class ContoOperativo(TenantBaseModel):
+    """ Rappresenta una categoria di costo o ricavo (es. Acquisto Cancelleria). """
+    class TipoConto(models.TextChoices):
+        COSTO = 'Costo', 'Costo'
+        RICAVO = 'Ricavo', 'Ricavo'
+
+    nome_conto = models.CharField(max_length=100, unique=True)
+    tipo = models.CharField(max_length=20, choices=TipoConto.choices)
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.nome_conto}"
+    
+    class Meta:
+        verbose_name = "Conto Operativo"
+        verbose_name_plural = "Conti Operativi"
+
