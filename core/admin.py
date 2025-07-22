@@ -1,11 +1,10 @@
-from django.contrib.contenttypes.admin import GenericTabularInline 
 from django.contrib import admin
 from .models import (
     AliquotaIVA, ModalitaPagamento,
     Cliente, Fornitore, Dipendente,
     Cantiere, DocumentoTestata, DocumentoRiga 
 )
-from generic_helpers.admin import GenericRelationModelAdmin
+
 
 @admin.register(AliquotaIVA)
 class AliquotaIVAAdmin(admin.ModelAdmin):
@@ -140,33 +139,38 @@ class CantiereAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-# 1. Definiamo l'inline per le righe del documento
+# --- Classi per Documenti (Versione Finale) ---
+
 class DocumentoRigaInline(admin.TabularInline):
     model = DocumentoRiga
-    # fields = ['descrizione', 'quantita', 'prezzo_unitario', 'aliquota_iva'] # Campi da mostrare
-    readonly_fields = ('imponibile_riga', 'iva_riga') # Mostra i totali di riga ma non li rende modificabili
-    extra = 1 # Mostra sempre una riga vuota per l'inserimento
+    readonly_fields = ('imponibile_riga', 'iva_riga')
+    extra = 1
 
 @admin.register(DocumentoTestata)
 class DocumentoTestataAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'content_object', 'stato', 'totale')
     list_filter = ('stato', 'tipo_documento', 'data_documento')
-    search_fields = ('numero_documento',) 
+    search_fields = ('numero_documento',)
 
-    raw_id_fields = ('object_id',)
-    
-    readonly_fields = ('imponibile', 'iva', 'totale', 'numero_documento', 'created_at', 'updated_at', 'created_by', 'updated_by')
+    # --- LA SOLUZIONE CORRETTA E SEMPLICE ---
+    # Questa opzione, grazie a django-generic-helpers, crea il widget corretto
+    # per la coppia content_type + object_id.
+    raw_id_fields = ("content_object",)
+
+    readonly_fields = ('imponibile', 'iva', 'totale', 'created_at', 'updated_at', 'created_by', 'updated_by')
     inlines = [DocumentoRigaInline]
 
     fieldsets = (
         ('Informazioni Principali', {
             'fields': (
                 ('tipo_documento', 'stato'),
-                ('numero_documento', 'data_documento'),
-                # Questi due ora verranno manipolati via JS
-                'content_type', 
-                'object_id',
-                'cantiere', 
+                # Il numero documento ora verrà generato automaticamente
+                # Lo mostriamo solo in modifica
+                'numero_documento',
+                'data_documento',
+                # Il campo che ora ha il widget corretto
+                'content_object',
+                'cantiere',
                 'modalita_pagamento'
             )
         }),
@@ -179,22 +183,19 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         }),
     )
 
-    class Media:
-        js = ('admin/js/documento_form.js',)
-
-    # Rimuoviamo il metodo get_form, non serve per questa logica.
-    
-    def get_readonly_fields(self, request, obj=None):
-        # Se l'oggetto esiste già, rendiamo il numero documento non modificabile
-        if obj:
-            # Aggiunge 'numero_documento' ai readonly_fields standard in modalità modifica
-            return self.readonly_fields + ('numero_documento',)
-        return self.readonly_fields
+    def get_fieldsets(self, request, obj=None):
+        # Nasconde il campo numero_documento in creazione
+        fieldsets = super().get_fieldsets(request, obj)
+        if not obj: # Siamo in creazione
+            # Rimuoviamo il campo numero_documento dal primo fieldset
+            fields = list(fieldsets[0][1]['fields'])
+            fields.remove('numero_documento')
+            fieldsets[0][1]['fields'] = tuple(fields)
+        return fieldsets
 
     def save_model(self, request, obj, form, change):
         if not obj.pk:
             obj.created_by = request.user
-            
             from django.utils import timezone
             current_year = timezone.now().year
             
@@ -215,16 +216,12 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-    # ... save_formset rimane identico ...
     def save_formset(self, request, form, formset, change):
-        instances = formset.save(commit=False)
-        for instance in instances:
-            instance.save()
-        formset.save_m2m()
+        formset.save() # Salva tutte le righe
         
         testata = form.instance
-        testata.imponibile = sum(riga.imponibile_riga for riga in testata.righe.all())
-        testata.iva = sum(riga.iva_riga for riga in testata.righe.all())
+        testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga)
+        testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga)
         testata.totale = testata.imponibile + testata.iva
         testata.save()
         super().save_formset(request, form, formset, change)
