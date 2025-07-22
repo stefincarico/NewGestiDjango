@@ -148,21 +148,93 @@ class DocumentoRigaInline(admin.TabularInline):
 
 @admin.register(DocumentoTestata)
 class DocumentoTestataAdmin(admin.ModelAdmin):
-    # --- MODIFICA QUI: Mostriamo un campo 'contatto' personalizzato ---
-    list_display = ('__str__', 'contatto', 'stato', 'totale')
+    # --- 1. CONFIGURAZIONE DELLA LISTA ---
+    # Aggiungiamo 'data_documento' e la rendiamo ordinabile di default.
+    # Specifichiamo che solo 'numero_documento' è il link al dettaglio.
+    list_display = ('numero_documento', 'data_documento', 'contatto', 'stato', 'totale')
+    list_display_links = ('numero_documento',)
     list_filter = ('stato', 'tipo_documento', 'data_documento')
     search_fields = ('numero_documento', 'cliente__nome_cognome_ragione_sociale', 'fornitore__nome_cognome_ragione_sociale')
-    
-    # --- MODIFICA QUI: Questi sono i campi corretti per il raw_id ---
     raw_id_fields = ('cliente', 'fornitore', 'cantiere')
-    
     readonly_fields = ('imponibile', 'iva', 'totale', 'created_at', 'updated_at', 'created_by', 'updated_by')
     inlines = [DocumentoRigaInline]
-    
-    # Non ci servono fieldsets complessi per ora, l'admin gestirà i campi
-    # in base a quali sono compilati. Rimuoviamoli per semplicità.
 
-    # --- NUOVO METODO per mostrare il contatto corretto nella lista ---
+    # --- 2. GESTIONE DINAMICA DEL FORM ---
+    # Questa classe dice a Django di caricare il nostro JavaScript.
+    class Media:
+        js = ('admin/js/documento_form.js',)
+        
+    # Questo metodo nasconde il campo 'numero_documento' SOLO quando creiamo un nuovo oggetto.
+    def get_fieldsets(self, request, obj=None):
+        base_fields = (
+            ('tipo_documento', 'stato'),
+            'data_documento',
+            'cliente',
+            'fornitore',
+            'cantiere',
+            'modalita_pagamento'
+        )
+        # Se stiamo modificando un oggetto esistente, mostriamo anche il suo numero
+        if obj:
+            base_fields = ('numero_documento',) + base_fields
+            
+        return (
+            ('Informazioni Principali', {'fields': base_fields}),
+            ('Riepilogo', {'classes': ('collapse',), 'fields': self.readonly_fields}),
+            ('Note', {'fields': ('note',)})
+        )
+    
+    def get_readonly_fields(self, request, obj=None):
+        # Se stiamo modificando un oggetto (obj esiste)...
+        if obj:
+            # ...restituisci la lista originale PIÙ 'numero_documento'
+            return self.readonly_fields + ('numero_documento',)
+        # Altrimenti (in creazione), restituisci solo la lista originale
+        return self.readonly_fields
+
+    # --- 3. LOGICA DI SALVATAGGIO E NUMERAZIONE ---
+    def save_model(self, request, obj, form, change):
+        # La logica di audit viene eseguita sempre
+        obj.updated_by = request.user
+        
+        # La logica di creazione/numerazione viene eseguita solo per i nuovi oggetti
+        if not obj.pk:
+            obj.created_by = request.user
+            
+            from django.utils import timezone
+            current_year = timezone.now().year
+            
+            doc_type = obj.tipo_documento
+            prefix = ""
+            
+            # Determina il prefisso in base al tipo di documento
+            if doc_type == DocumentoTestata.TipoDocumento.FATTURA_VENDITA:
+                prefix = f"FT-{current_year}-"
+            elif doc_type == DocumentoTestata.TipoDocumento.NOTA_CREDITO_VENDITA:
+                prefix = f"NC-{current_year}-"
+
+            # Se è un tipo di documento che richiede numerazione automatica...
+            if prefix:
+                # Trova l'ultimo documento dello stesso tipo e dello stesso anno
+                last_doc = DocumentoTestata.objects.filter(
+                    tipo_documento=doc_type,
+                    data_documento__year=current_year
+                ).order_by('numero_documento').last()
+                
+                new_number = 1
+                if last_doc and last_doc.numero_documento.startswith(prefix):
+                    try:
+                        last_number_str = last_doc.numero_documento.replace(prefix, '')
+                        new_number = int(last_number_str) + 1
+                    except (ValueError, IndexError):
+                        new_number = 1
+                
+                obj.numero_documento = f"{prefix}{new_number:06d}"
+        
+        # Infine, chiama il metodo di salvataggio originale
+        super().save_model(request, obj, form, change)
+
+    # --- METODI HELPER (invariati ma necessari) ---
     @admin.display(description='Contatto')
     def contatto(self, obj):
         if obj.cliente:
@@ -170,28 +242,12 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         if obj.fornitore:
             return obj.fornitore
         return "-"
-    
-    class Media:
-        js = ('admin/js/documento_form.js',)
-
-    def save_model(self, request, obj, form, change):
-        # ... la logica di save_model rimane la stessa di prima ...
-        if not obj.pk:
-            obj.created_by = request.user
-            from django.utils import timezone
-            current_year = timezone.now().year
-            if obj.tipo_documento == DocumentoTestata.TipoDocumento.FATTURA_VENDITA:
-                # ... logica di numerazione ...
-                pass
-        obj.updated_by = request.user
-        super().save_model(request, obj, form, change)
-
+        
     def save_formset(self, request, form, formset, change):
-        # ... la logica di save_formset rimane la stessa di prima ...
         formset.save()
         testata = form.instance
-        testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga)
-        testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga)
+        testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga is not None)
+        testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga is not None)
         testata.totale = testata.imponibile + testata.iva
         testata.save()
         super().save_formset(request, form, formset, change)
