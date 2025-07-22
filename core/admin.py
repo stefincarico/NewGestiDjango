@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     AliquotaIVA, ModalitaPagamento,
     Cliente, Fornitore, Dipendente,
-    Cantiere, DocumentoTestata, DocumentoRiga 
+    Cantiere, DocumentoTestata, DocumentoRiga , Scadenza
 )
 
 
@@ -251,3 +251,23 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         testata.totale = testata.imponibile + testata.iva
         testata.save()
         super().save_formset(request, form, formset, change)
+
+
+
+@admin.register(Scadenza)
+class ScadenzaAdmin(admin.ModelAdmin):
+    list_display = (
+        'data_scadenza', 
+        'anagrafica', 
+        'importo', 
+        'importo_residuo',
+        'stato', 
+        'documento',
+        'is_scaduta'
+    )
+    list_filter = ('stato', 'tipo_scadenza', 'data_scadenza')
+    search_fields = ('documento__numero_documento', 'anagrafica__nome_cognome_ragione_sociale')
+    list_display_links = ('data_scadenza', 'anagrafica')
+    
+    # Rendiamo i campi calcolati e relazionati non modificabili direttamente
+    readonly_fields = ('importo_residuo', 'is_scaduta', 'created_at', 'updated_at', 'created_by', 'updated_by')
