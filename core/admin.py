@@ -170,6 +170,9 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         if obj.fornitore:
             return obj.fornitore
         return "-"
+    
+    class Media:
+        js = ('admin/js/documento_form.js',)
 
     def save_model(self, request, obj, form, change):
         # ... la logica di save_model rimane la stessa di prima ...
