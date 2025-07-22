@@ -163,19 +163,10 @@ class DocumentoTestata(TenantBaseModel):
     tipo_documento = models.CharField(max_length=30, choices=TipoDocumento.choices)
     stato = models.CharField(max_length=20, choices=StatoDocumento.choices, default=StatoDocumento.BOZZA)
     
-    # --- LA RELAZIONE GENERICA ---
-    # Definiamo i limiti: quali modelli possono essere collegati?
-    limit_choices = models.Q(app_label='core', model='cliente') | models.Q(app_label='core', model='fornitore')
+    # --- LA STRUTTURA CORRETTA E ROBUSTA ---
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='documenti_cliente', null=True, blank=True)
+    fornitore = models.ForeignKey(Fornitore, on_delete=models.PROTECT, related_name='documenti_fornitore', null=True, blank=True)
     
-    content_type = models.ForeignKey(
-        ContentType, 
-        on_delete=models.PROTECT,
-        limit_choices_to=limit_choices
-    )
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
-    # -----------------------------
-
     cantiere = models.ForeignKey(Cantiere, on_delete=models.PROTECT, related_name='documenti', null=True, blank=True)
     modalita_pagamento = models.ForeignKey(ModalitaPagamento, on_delete=models.PROTECT, null=True, blank=True)
 

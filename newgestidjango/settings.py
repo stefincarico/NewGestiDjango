@@ -10,7 +10,6 @@ ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
-    'generic_helpers',  # La nostra libreria per le relazioni generiche
     'core',
     'django.contrib.admin',
     'django.contrib.auth',
