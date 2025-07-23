@@ -1,4 +1,4 @@
-<tr id="scadenza-row-{{ scadenza.id }}" class="{% if scadenza.is_scaduta %}table-danger{% endif %}">
+<tr id="scadenza-row-{{ scadenza.id }}" class="align-middle {% if scadenza.is_scaduta %}table-danger{% endif %}">
     <td>{{ scadenza.data_scadenza|date:"d/m/Y" }}</td>
     <td>{{ scadenza.anagrafica }}</td>
     <td>{{ scadenza.documento.numero_documento }}</td>
@@ -13,7 +13,7 @@
             {{ scadenza.get_stato_display }}
         </span>
     </td>
-    <td class="text-center" style="width: 100px;">
+    <td class="text-center">
         {% if scadenza.stato != 'Saldata' and scadenza.stato != 'Annullata' %}
         <button class="btn btn-sm btn-primary"
                 hx-get="{% url 'registra_pagamento_form' scadenza.id %}"
