@@ -305,3 +305,34 @@ class ContoOperativo(TenantBaseModel):
         verbose_name = "Conto Operativo"
         verbose_name_plural = "Conti Operativi"
 
+
+class PrimaNota(TenantBaseModel):
+    class TipoMovimento(models.TextChoices):
+        ENTRATA = 'Entrata', 'Entrata'
+        USCITA = 'Uscita', 'Uscita'
+        GIROCONTO = 'Giroconto', 'Giroconto'
+
+    data = models.DateField(help_text="Data di registrazione del movimento")
+    descrizione = models.CharField(max_length=255)
+    importo = models.DecimalField(max_digits=10, decimal_places=2)
+    tipo_movimento = models.CharField(max_length=20, choices=TipoMovimento.choices)
+
+    # --- Collegamenti Obbligatori ---
+    conto_finanziario = models.ForeignKey(ContoFinanziario, on_delete=models.PROTECT, related_name='movimenti')
+
+    # --- Collegamenti Opzionali (Contesto del movimento) ---
+    scadenza_collegata = models.ForeignKey(Scadenza, on_delete=models.SET_NULL, null=True, blank=True, related_name='pagamenti')
+    conto_operativo = models.ForeignKey(ContoOperativo, on_delete=models.PROTECT, null=True, blank=True)
+    anagrafica = models.ForeignKey(Anagrafica, on_delete=models.PROTECT, null=True, blank=True)
+    cantiere = models.ForeignKey(Cantiere, on_delete=models.PROTECT, null=True, blank=True)
+    
+    # Per i giroconti: collega due movimenti di PrimaNota tra loro
+    movimento_collegato = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='giroconto_associato')
+
+    def __str__(self):
+        return f"{self.data} - {self.descrizione} - {self.importo} EUR"
+    
+    class Meta:
+        verbose_name = "Movimento di Prima Nota"
+        verbose_name_plural = "Prima Nota"
+        ordering = ['-data']
