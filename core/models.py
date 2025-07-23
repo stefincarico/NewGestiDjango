@@ -170,7 +170,7 @@ class DocumentoTestata(TenantBaseModel):
     cantiere = models.ForeignKey(Cantiere, on_delete=models.PROTECT, related_name='documenti', null=True, blank=True)
     modalita_pagamento = models.ForeignKey(ModalitaPagamento, on_delete=models.PROTECT, null=True, blank=True)
 
-    numero_documento = models.CharField(max_length=50)
+    numero_documento = models.CharField(max_length=50, blank=True)
     data_documento = models.DateField()
     
     imponibile = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -344,3 +344,8 @@ class PrimaNota(TenantBaseModel):
         verbose_name = "Movimento di Prima Nota"
         verbose_name_plural = "Prima Nota"
         ordering = ['-data']
+
+class TipoMovimento(models.TextChoices):
+    ENTRATA = 'Entrata', 'Entrata'
+    USCITA = 'Uscita', 'Uscita'
+    # GIROCONTO lo gestiremo in modo speciale, per ora non ci serve qui

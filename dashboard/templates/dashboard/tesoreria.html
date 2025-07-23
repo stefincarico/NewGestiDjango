@@ -1,0 +1,53 @@
+<!-- in dashboard/templates/dashboard/tesoreria.html -->
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ titolo }} - GestionarioWEB{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">{{ titolo }}</h1>
+    <div>
+        <button class="btn btn-warning">Esporta Riepilogo PDF</button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Saldi al: {{ data_oggi|date:"d/m/Y" }}</span>
+        <span class="fs-5 fw-bold">Liquidità Totale: 
+            <span class="{% if liquidita_totale < 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ liquidita_totale|floatformat:2|intcomma }} €
+            </span>
+        </span>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Conto Finanziario</th>
+                    <th class="text-end">Saldo</th>
+                    <th class="text-center">Azioni</th>
+                </tr>
+            </thead>
+            <tbody id="tabella-saldi-conti">
+                {% for conto in conti %}
+                <tr class="align-middle">
+                    <td>{{ conto.nome_conto }}</td>
+                    <td class="text-end fw-bold {% if conto.saldo < 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ conto.saldo|floatformat:2|intcomma }} €
+                    </td>
+                    <td class="text-center">
+                        <a href="#" class="btn btn-sm btn-outline-primary">Estratto Conto</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">Nessun conto finanziario trovato.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

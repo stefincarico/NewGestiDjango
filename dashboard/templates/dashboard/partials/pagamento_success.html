@@ -1,0 +1,22 @@
+<!-- in dashboard/templates/dashboard/partials/pagamento_success.html -->
+{% load humanize %}
+
+<!-- Pezzo 1: La riga della tabella aggiornata -->
+<tr id="scadenza-row-{{ scadenza.id }}" hx-swap-oob="outerHTML">
+    {% include 'dashboard/partials/riga_scadenza.html' with scadenza=scadenza %}
+</tr>
+
+<!-- Pezzo 2: Il corpo della tabella dei saldi aggiornato -->
+<tbody id="tabella-saldi-conti" hx-swap-oob="innerHTML">
+    {% for conto in conti %}
+    <tr class="align-middle">
+        <td>{{ conto.nome_conto }}</td>
+        <td class="text-end fw-bold {% if conto.saldo < 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ conto.saldo|floatformat:2|intcomma }} €
+        </td>
+        <td class="text-center">
+            <a href="#" class="btn btn-sm btn-outline-primary">Estratto Conto</a>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>

@@ -3,7 +3,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views 
 from .views import (
     dashboard_view, scadenziario_incassi_view, scadenziario_pagamenti_view, 
-    registra_pagamento_form, salva_pagamento, get_scadenza_row,scadenziario_view
+    registra_pagamento_form, salva_pagamento, get_scadenza_row,scadenziario_view,tesoreria_view
 )
 
 urlpatterns = [
@@ -15,4 +15,5 @@ urlpatterns = [
     path('scadenza/<int:scadenza_id>/registra-pagamento/', registra_pagamento_form, name='registra_pagamento_form'),
     path('scadenza/<int:scadenza_id>/salva-pagamento/', salva_pagamento, name='salva_pagamento'),
     path('scadenza/<int:scadenza_id>/', get_scadenza_row, name='get_scadenza_row'),
+    path('tesoreria/', tesoreria_view, name='tesoreria'), 
 ]

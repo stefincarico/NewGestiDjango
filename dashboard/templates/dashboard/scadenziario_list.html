@@ -56,7 +56,7 @@
                     <th class="text-center">Azioni</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tabella-scadenze">
                 {% for scadenza in scadenze %}
                     {% include 'dashboard/partials/riga_scadenza.html' %}
                 {% empty %}

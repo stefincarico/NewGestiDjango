@@ -117,19 +117,42 @@ def salva_pagamento(request, scadenza_id):
         data = request.POST.get('data')
         conto = get_object_or_404(ContoFinanziario, pk=conto_id)
 
-        PrimaNota.objects.create(
-            data=data,
-            tipo_movimento=scadenza.tipo_scadenza,
-            descrizione=f"SALDO SCAD. DOC. {scadenza.documento.numero_documento}",
-            importo=importo,
-            conto_finanziario=conto,
-            scadenza_collegata=scadenza,
-            anagrafica=scadenza.anagrafica
-        )
+        tipo_movimento_primanota = None
+        if scadenza.tipo_scadenza == Scadenza.TipoScadenza.INCASSO:
+            tipo_movimento_primanota = PrimaNota.TipoMovimento.ENTRATA
+        elif scadenza.tipo_scadenza == Scadenza.TipoScadenza.PAGAMENTO:
+            tipo_movimento_primanota = PrimaNota.TipoMovimento.USCITA
+
+        # Crea il movimento di PrimaNota con il tipo corretto
+        if tipo_movimento_primanota:
+            PrimaNota.objects.create(
+                data=data,
+                tipo_movimento=tipo_movimento_primanota, # <-- Usa la variabile tradotta
+                descrizione=f"SALDO SCAD. DOC. {scadenza.documento.numero_documento}",
+                importo=importo,
+                conto_finanziario=conto,
+                scadenza_collegata=scadenza,
+                anagrafica=scadenza.anagrafica
+            )
         scadenza.refresh_from_db()
         
-    # Dopo aver salvato, restituisce la riga della tabella aggiornata.
-    return render(request, 'dashboard/partials/riga_scadenza.html', {'scadenza': scadenza})
+    # --- NUOVA LOGICA DI RICALCOLO ---
+    # Dopo aver salvato, ricalcoliamo i saldi per la dashboard di tesoreria
+    conti_finanziari = ContoFinanziario.objects.filter(attivo=True).annotate(
+        totale_entrate=Coalesce(Sum('movimenti__importo', filter=Q(movimenti__tipo_movimento='Entrata')), 0, output_field=DecimalField()),
+        totale_uscite=Coalesce(Sum('movimenti__importo', filter=Q(movimenti__tipo_movimento='Uscita')), 0, output_field=DecimalField())
+    ).annotate(saldo=F('totale_entrate') - F('totale_uscite'))
+    
+    liquidita_totale = conti_finanziari.aggregate(totale=Sum('saldo'))['totale'] or 0.00
+
+    context = {
+        'scadenza': scadenza, # La scadenza appena aggiornata
+        'conti': conti_finanziari, # I conti con i nuovi saldi
+        'liquidita_totale': liquidita_totale
+    }
+    
+    # Restituisce un nuovo template che contiene più pezzi
+    return render(request, 'dashboard/partials/pagamento_success.html', context)
 
 @login_required
 def get_scadenza_row(request, scadenza_id):
@@ -166,3 +189,28 @@ def scadenziario_view(request):
         'titolo': 'Scadenziario Aperto'
     }
     return render(request, 'dashboard/scadenziario_list.html', context)
+
+@login_required
+def tesoreria_view(request):
+    """
+    Mostra i saldi di tutti i conti finanziari.
+    """
+    # Riutilizziamo la potente query con annotate che abbiamo già scritto!
+    conti_finanziari = ContoFinanziario.objects.filter(attivo=True).annotate(
+        totale_entrate=Coalesce(Sum('movimenti__importo', filter=Q(movimenti__tipo_movimento='Entrata')), 0, output_field=DecimalField()),
+        totale_uscite=Coalesce(Sum('movimenti__importo', filter=Q(movimenti__tipo_movimento='Uscita')), 0, output_field=DecimalField())
+    ).annotate(
+        saldo=F('totale_entrate') - F('totale_uscite')
+    )
+    
+    # Calcoliamo la liquidità totale da passare al template
+    liquidita_totale = conti_finanziari.aggregate(totale=Sum('saldo'))['totale'] or 0.00
+
+    context = {
+        'conti': conti_finanziari,
+        'liquidita_totale': liquidita_totale,
+        'data_oggi': timezone.now().date(),
+        'titolo': 'Dashboard Tesoreria'
+    }
+    
+    return render(request, 'dashboard/tesoreria.html', context)
