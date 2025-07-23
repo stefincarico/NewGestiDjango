@@ -4,6 +4,7 @@ from django.utils import timezone
 from core.models import PrimaNota, ContoFinanziario, Scadenza
 from django.db.models import Sum, Q, F, DecimalField
 from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 @login_required
 def dashboard_view(request):
@@ -53,17 +54,11 @@ def dashboard_view(request):
     saldo_circolante_netto = crediti_totali - debiti_totali
     
     # --- 5. Dati per i Widget ---
-    scadenze_imminenti = Scadenza.objects.filter(
-        tipo_scadenza=Scadenza.TipoScadenza.INCASSO,
+    scadenze_imminenti = Scadenza.objects.filter(        
         stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE],
         data_scadenza__gte=oggi
         ).order_by('data_scadenza')[:5]
     
-    scadenze_pagamenti_imminenti = Scadenza.objects.filter(
-        tipo_scadenza=Scadenza.TipoScadenza.PAGAMENTO,
-        stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE],
-        data_scadenza__gte=oggi
-        ).order_by('data_scadenza')[:5]
 
     # Inseriamo i dati nel contesto da passare al template
     context = {
@@ -75,7 +70,6 @@ def dashboard_view(request):
         'saldo_circolante_netto': saldo_circolante_netto,
         'conti_finanziari_con_saldo': conti_finanziari,
         'scadenze_imminenti': scadenze_imminenti,
-        'scadenze_pagamenti_imminenti': scadenze_pagamenti_imminenti,
     }
     
     return render(request, 'dashboard/dashboard.html', context)
@@ -143,3 +137,37 @@ def get_scadenza_row(request, scadenza_id):
     # Questa vista restituisce una singola riga aggiornata (utile per l'annulla).
     return render(request, 'dashboard/partials/riga_scadenza.html', {'scadenza': scadenza})
 
+@login_required
+def scadenziario_view(request):
+    # Logica di base: prendi tutte le scadenze aperte
+    scadenze_list = Scadenza.objects.filter(
+        stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE]
+    ).select_related('documento', 'anagrafica').order_by('data_scadenza')
+
+    # --- Qui in futuro inseriremo la logica di filtro basata su request.GET ---
+    
+    # --- Calcolo KPI per l'header della pagina ---
+    kpi = scadenze_list.aggregate(
+        tot_incassi=Coalesce(Sum('importo', filter=Q(tipo_scadenza='Incasso')), 0, output_field=DecimalField()),
+        tot_pagamenti=Coalesce(Sum('importo', filter=Q(tipo_scadenza='Pagamento')), 0, output_field=DecimalField())
+    )
+    kpi['saldo_circolante'] = kpi['tot_incassi'] - kpi['tot_pagamenti']
+
+    # --- Logica di Paginazione ---
+    paginator = Paginator(scadenze_list, 15) # 15 scadenze per pagina
+    page_number = request.GET.get('page')
+    try:
+        scadenze_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        # Se page non è un intero, mostra la prima pagina
+        scadenze_page = paginator.page(1)
+    except EmptyPage:
+        # Se page è fuori range, mostra l'ultima pagina di risultati
+        scadenze_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'scadenze': scadenze_page,
+        'kpi': kpi,
+        'titolo': 'Scadenziario Aperto'
+    }
+    return render(request, 'dashboard/scadenziario_list.html', context)

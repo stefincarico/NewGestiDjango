@@ -1,37 +1,89 @@
 <!-- in dashboard/templates/dashboard/scadenziario_list.html -->
 {% extends 'base.html' %}
-
-{% block title %}{{ titolo }} - GestionarioWEB{% endblock %}
+{% load humanize %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="mb-4">{{ titolo }}</h1>
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Data Scadenza</th>
-                            <th>Contatto</th>
-                            <th>Rif. Documento</th>
-                            <th class="text-end">Importo Residuo</th>
-                            <th class="text-center">Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for scadenza in scadenze %}
-                            {% include 'dashboard/partials/riga_scadenza.html' %}
-                        {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">Nessuna scadenza da visualizzare.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">{{ titolo }}</h1>
+    <div>
+        <button class="btn btn-success">Esporta Excel</button>
+        <button class="btn btn-warning">Esporta PDF</button>
+    </div>
+</div>
+
+<!-- Riga KPI -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h5 class="card-title text-muted">Incassi Aperti</h5>
+            <p class="card-text fs-3 fw-bold text-success">{{ kpi.tot_incassi|floatformat:2|intcomma }} €</p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h5 class="card-title text-muted">Pagamenti Aperti</h5>
+            <p class="card-text fs-3 fw-bold text-danger">{{ kpi.tot_pagamenti|floatformat:2|intcomma }} €</p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm"><div class="card-body">
+            <h5 class="card-title text-muted">Saldo Circolante</h5>
+            <p class="card-text fs-3 fw-bold">{{ kpi.saldo_circolante|floatformat:2|intcomma }} €</p>
+        </div></div>
+    </div>
+</div>
+
+<!-- Card Filtri (per ora statica) -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <!-- ... qui inseriremo i campi del form di filtro ... -->
+        Filtri in costruzione...
+    </div>
+</div>
+
+<!-- Tabella Scadenze -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Data Scad.</th>
+                    <th>Tipo</th>
+                    <th>Cliente/Fornitore</th>
+                    <th>Rif. Documento</th>
+                    <th class="text-end">Residuo</th>
+                    <th class="text-center">Stato</th>
+                    <th class="text-center">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scadenza in scadenze %}
+                    {% include 'dashboard/partials/riga_scadenza.html' %}
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">Nessuna scadenza trovata.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Navigazione Paginazione -->
+    <div class="card-footer">
+        <nav aria-label="Navigazione pagine">
+            <ul class="pagination justify-content-center mb-0">
+                {% if scadenze.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1">« Prima</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ scadenze.previous_page_number }}">Precedente</a></li>
+                {% endif %}
+
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">Pagina {{ scadenze.number }} di {{ scadenze.paginator.num_pages }}</span>
+                </li>
+
+                {% if scadenze.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ scadenze.next_page_number }}">Successiva</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ scadenze.paginator.num_pages }}">Ultima »</a></li>
+                {% endif %}
+            </ul>
+        </nav>
     </div>
 </div>
 {% endblock %}

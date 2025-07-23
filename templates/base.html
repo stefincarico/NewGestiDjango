@@ -20,15 +20,8 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="scadenziarioDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Scadenzario
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="scadenziarioDropdown">
-                                <li><a class="dropdown-item" href="{% url 'scadenziario_incassi' %}">Incassi</a></li>
-                                <li><a class="dropdown-item" href="{% url 'scadenziario_pagamenti' %}">Pagamenti</a></li>
-                            </ul>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'scadenziario' %}">Scadenziario</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#">Documenti</a>
