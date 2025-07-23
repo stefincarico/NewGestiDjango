@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
-    AliquotaIVA, ModalitaPagamento,
+    AliquotaIVA, ContoFinanziario, ContoOperativo, ModalitaPagamento,
     Cliente, Fornitore, Dipendente,
-    Cantiere, DocumentoTestata, DocumentoRiga , Scadenza
+    Cantiere, DocumentoTestata, DocumentoRiga , Scadenza, PrimaNota
 )
 
 
@@ -252,8 +252,6 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         testata.save()
         super().save_formset(request, form, formset, change)
 
-
-
 @admin.register(Scadenza)
 class ScadenzaAdmin(admin.ModelAdmin):
     list_display = (
@@ -271,3 +269,57 @@ class ScadenzaAdmin(admin.ModelAdmin):
     
     # Rendiamo i campi calcolati e relazionati non modificabili direttamente
     readonly_fields = ('importo_residuo', 'is_scaduta', 'created_at', 'updated_at', 'created_by', 'updated_by')
+
+@admin.register(ContoFinanziario)
+class ContoFinanziarioAdmin(admin.ModelAdmin):
+    list_display = ('nome_conto', 'attivo')
+    search_fields = ('nome_conto',)
+    exclude = ('created_by', 'updated_by')
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(ContoOperativo)
+class ContoOperativoAdmin(admin.ModelAdmin):
+    list_display = ('nome_conto', 'tipo', 'attivo')
+    list_filter = ('tipo', 'attivo')
+    search_fields = ('nome_conto',)
+    exclude = ('created_by', 'updated_by') 
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(PrimaNota)
+class PrimaNotaAdmin(admin.ModelAdmin):
+    list_display = ('data', 'descrizione', 'importo', 'tipo_movimento', 'conto_finanziario', 'scadenza_collegata')
+    list_filter = ('tipo_movimento', 'data', 'conto_finanziario')
+    search_fields = ('descrizione', 'scadenza_collegata__documento__numero_documento')
+    
+    # Usiamo raw_id_fields per selezionare facilmente la scadenza
+    raw_id_fields = ('scadenza_collegata', 'anagrafica', 'cantiere')
+    
+    fieldsets = (
+        ('Dati Principali', {
+            'fields': (
+                ('data', 'tipo_movimento'),
+                'descrizione',
+                ('importo', 'conto_finanziario')
+            )
+        }),
+        ('Collegamenti (Opzionali)', {
+            'classes': ('collapse',), # Sezione chiusa di default
+            'fields': (
+                'scadenza_collegata',
+                'conto_operativo',
+                'anagrafica',
+                'cantiere'
+            )
+        }),
+    )
+

@@ -277,7 +277,10 @@ class Scadenza(TenantBaseModel):
 class ContoFinanziario(TenantBaseModel):
     """ Rappresenta un conto dove risiede la liquidità (es. Banca, Cassa). """
     nome_conto = models.CharField(max_length=100, unique=True)
-    
+    def save(self, *args, **kwargs):
+        self.nome_conto = self.nome_conto.upper()
+        super().save(*args, **kwargs)
+        
     # Potremmo aggiungere qui il saldo iniziale, ma per ora lo manteniamo semplice
     # saldo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
@@ -297,6 +300,11 @@ class ContoOperativo(TenantBaseModel):
 
     nome_conto = models.CharField(max_length=100, unique=True)
     tipo = models.CharField(max_length=20, choices=TipoConto.choices)
+
+    def save(self, *args, **kwargs):
+        self.nome_conto = self.nome_conto.upper()
+        super().save(*args, **kwargs)
+        
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.nome_conto}"
