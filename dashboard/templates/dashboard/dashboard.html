@@ -1,12 +1,124 @@
 <!-- in dashboard/templates/dashboard/dashboard.html -->
 {% extends 'base.html' %}
+{% load humanize %} <!-- Carica i filtri per la formattazione dei numeri -->
 
-{% block title %}Dashboard - (c) Lubrano){% endblock %}
+{% block title %}Dashboard - GestionarioWEB{% endblock %}
 
 {% block content %}
-    <h1 class="mb-4">Centro di Controllo Operativo</h1>
-    <div class="alert alert-info" role="alert">
-        <h4 class="alert-heading">Work in Progress!</h4>
-        <p>Questa dashboard è in fase di costruzione e presto mostrerà i principali indicatori di performance (KPI) e i dati aggregati dell'azienda.</p>
+    <h1 class="mb-4">Dashboard Riepilogativa</h1>
+
+    <!-- Riga 1: KPI Principali -->
+    <div class="row mb-4">
+        <!-- Card Crediti -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Crediti v/Clienti (Attivo)</h5>
+                    <p class="card-text fs-2 fw-bold text-success">{{ crediti_totali|floatformat:2|intcomma }} €</p>
+                    <small class="text-danger">(di cui scaduti: {{ crediti_scaduti|floatformat:2|intcomma }} €)</small>
+                </div>
+            </div>
+        </div>
+        <!-- Card Debiti -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Debiti v/Fornitori (Passivo)</h5>
+                    <p class="card-text fs-2 fw-bold text-danger">{{ debiti_totali|floatformat:2|intcomma }} €</p>
+                    <small class="text-danger">(di cui scaduti: {{ debiti_scaduti|floatformat:2|intcomma }} €)</small>
+                </div>
+            </div>
+        </div>
+        <!-- Card Liquidità -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Liquidità Totale</h5>
+                    <p class="card-text fs-2 fw-bold {% if liquidita_totale < 0 %}text-danger{% else %}text-primary{% endif %}">
+                        {{ liquidita_totale|floatformat:2|intcomma }} €
+                    </p>
+                    <small class="text-muted">(Somma saldi conti attivi)</small>
+                </div>
+            </div>
+        </div>
+        <!-- Card Saldo Circolante -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Saldo Circolante Netto</h5>
+                    <p class="card-text fs-2 fw-bold {% if saldo_circolante_netto < 0 %}text-danger{% else %}text-primary{% endif %}">
+                        {{ saldo_circolante_netto|floatformat:2|intcomma }} €
+                    </p>
+                    <small class="text-muted">(Crediti - Debiti)</small>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Riga 2: Widget Dettagliati -->
+    <div class="row">
+        <!-- Widget Saldi Conti -->
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Saldi Conti Finanziari</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for conto in conti_finanziari_con_saldo %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ conto.nome_conto }}
+                            <span class="badge {% if conto.saldo < 0 %}bg-danger{% else %}bg-success{% endif %} rounded-pill fs-6">
+                                {{ conto.saldo|floatformat:2|intcomma }} €
+                            </span>
+                        </div>
+                    {% empty %}
+                        <div class="list-group-item">Nessun conto finanziario attivo.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <!-- Widget Scadenze Incassi -->
+        <div class="card h-100 shadow-sm mb-3">
+            <div class="card-header"><h5 class="mb-0">Incassi Imminenti</h5></div>
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for scadenza in scadenze_imminenti %}
+                        <tr>
+                            <td>{{ scadenza.data_scadenza|date:"d/m" }}</td>
+                            <td>{{ scadenza.anagrafica }}</td>
+                            <td class="text-end">{{ scadenza.importo_residuo|floatformat:2|intcomma }} €</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td class="text-center text-muted">Nessun incasso imminente.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="card-footer text-end py-1">
+                <a href="{% url 'scadenziario_incassi' %}">Tutti gli Incassi →</a>
+            </div>
+        </div>
+
+        <!-- Widget Scadenze Pagamenti -->
+        <div class="card h-100 shadow-sm">
+            <div class="card-header"><h5 class="mb-0">Pagamenti Imminenti</h5></div>
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for scadenza in scadenze_pagamenti_imminenti %}
+                        <tr>
+                            <td>{{ scadenza.data_scadenza|date:"d/m" }}</td>
+                            <td>{{ scadenza.anagrafica }}</td>
+                            <td class="text-end text-danger fw-bold">{{ scadenza.importo_residuo|floatformat:2|intcomma }} €</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td class="text-center text-muted">Nessun pagamento imminente.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="card-footer text-end py-1">
+                <a href="{% url 'scadenziario_pagamenti' %}">Tutti i Pagamenti →</a>
+            </div>
+        </div>
+    </div>
+    </div>
+
 {% endblock %}
