@@ -3,15 +3,19 @@
     <td colspan="6">
         <div class="p-3 bg-light border rounded">
             <h5>Registra Pagamento per Scadenza #{{ scadenza.id }}</h5>
-            <form>
+            <!-- MODIFICHE QUI SOTTO -->
+            <form hx-post="{% url 'salva_pagamento' scadenza.id %}"
+                 hx-target="#payment-form-{{ scadenza.id }}" 
+                  hx-swap="outerHTML">
+                {% csrf_token %}
                 <div class="row g-2">
                     <div class="col-md-3">
                         <label class="form-label">Importo</label>
-                        <input type="number" class="form-control" value="{{ initial_data.importo }}">
+                        <input type="number" name="importo" class="form-control" value="{{ initial_data.importo }}" step="0.01">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Conto Finanziario</label>
-                        <select class="form-select">
+                        <select name="conto_finanziario" class="form-select">
                             {% for conto in conti_finanziari %}
                                 <option value="{{ conto.id }}">{{ conto.nome_conto }}</option>
                             {% endfor %}
@@ -19,11 +23,17 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Data Pagamento</label>
-                        <input type="date" class="form-control" value="{{ initial_data.data|date:'Y-m-d' }}">
+                        <input type="date" name="data" class="form-control" value="{{ initial_data.data|date:'Y-m-d' }}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-success me-2">Salva</button>
-                        <button type="button" class="btn btn-secondary">Annulla</button>
+                        <!-- Questo pulsante ora ricarica la riga per "annullare" -->
+                        <button type="button" class="btn btn-secondary"
+                                hx-get="{% url 'get_scadenza_row' scadenza.id %}"
+                                hx-target="#scadenza-row-{{ scadenza.id }}"
+                                hx-swap="outerHTML">
+                            Annulla
+                        </button>
                     </div>
                 </div>
             </form>

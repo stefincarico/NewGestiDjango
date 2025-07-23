@@ -20,32 +20,11 @@
                             <th>Azioni</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody hx-target="closest tr" hx-swap="outerHTML">
                         {% for scadenza in scadenze_in_entrata %}
-                            <tr class="{% if scadenza.is_scaduta %}table-danger{% endif %}">
-                                <td>{{ scadenza.data_scadenza|date:"d/m/Y" }}</td>
-                                <td>{{ scadenza.anagrafica }}</td>
-                                <td>{{ scadenza.documento.numero_documento }}</td>
-                                <td class="text-end fw-bold">{{ scadenza.importo_residuo }} €</td>
-                                <td class="text-center">
-                                    <span class="badge 
-                                        {% if scadenza.stato == 'Aperta' %}bg-warning text-dark
-                                        {% elif scadenza.stato == 'Parziale' %}bg-info text-dark
-                                        {% endif %}">
-                                        {{ scadenza.get_stato_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                        <!-- Questo è il pulsante HTMX -->
-                                    <button class="btn btn-sm btn-primary"
-                                            hx-get="{% url 'registra_pagamento_form' scadenza.id %}"
-                                            hx-target="#payment-form-placeholder-{{ scadenza.id }}"
-                                            hx-swap="outerHTML">
-                                        Paga
-                                    </button>
-                                </td>
+                            <tr id="scadenza-row-{{ scadenza.id }}">
+                                {% include 'dashboard/partials/riga_scadenza_content.html' %}
                             </tr>
-                            <tr id="payment-form-placeholder-{{ scadenza.id }}"></tr>
                         {% empty %}
                             <tr>
                                 <td colspan="6" class="text-center text-muted">Nessuna scadenza in entrata.</td>

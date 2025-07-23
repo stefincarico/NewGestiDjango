@@ -42,3 +42,34 @@ def registra_pagamento_form(request, scadenza_id):
     }
     # NOTA: Restituiamo un template "parziale", senza estendere base.html
     return render(request, 'dashboard/partials/form_pagamento.html', context)
+
+@login_required
+def salva_pagamento(request, scadenza_id):
+    scadenza = get_object_or_404(Scadenza, pk=scadenza_id)
+    if request.method == 'POST':
+        # Recupera i dati inviati dal form
+        importo = request.POST.get('importo')
+        conto_id = request.POST.get('conto_finanziario')
+        data = request.POST.get('data')
+        conto = get_object_or_404(ContoFinanziario, pk=conto_id)
+
+        # Crea il movimento di PrimaNota (questo attiverà i nostri segnali!)
+        PrimaNota.objects.create(
+            data=data,
+            tipo_movimento=scadenza.tipo_scadenza,
+            descrizione=f"SALDO SCAD. DOC. {scadenza.documento.numero_documento}",
+            importo=importo,
+            conto_finanziario=conto,
+            scadenza_collegata=scadenza,
+            anagrafica=scadenza.anagrafica
+        )
+        # Ricarica la scadenza dal DB per avere i dati aggiornati dal segnale
+        scadenza.refresh_from_db()
+        
+    # Restituisce solo la riga della tabella aggiornata
+    return render(request, 'dashboard/partials/riga_scadenza.html', {'scadenza': scadenza})
+
+@login_required
+def get_scadenza_row(request, scadenza_id):
+    scadenza = get_object_or_404(Scadenza, pk=scadenza_id)
+    return render(request, 'dashboard/partials/riga_scadenza.html', {'scadenza': scadenza})
