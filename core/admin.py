@@ -1,145 +1,82 @@
 from django.contrib import admin
 from .models import (
-    AliquotaIVA, ContoFinanziario, ContoOperativo, ModalitaPagamento,
+    AliquotaIVA, ModalitaPagamento,
     Cliente, Fornitore, Dipendente,
-    Cantiere, DocumentoTestata, DocumentoRiga , Scadenza, PrimaNota
+    Cantiere, DocumentoTestata, DocumentoRiga, Scadenza, PrimaNota,
+    ContoFinanziario, ContoOperativo
 )
 
+# ==============================================================================
+# === MODELLI DI CONFIGURAZIONE E ANAGRAFICHE (Logica semplice)              ===
+# ==============================================================================
 
 @admin.register(AliquotaIVA)
 class AliquotaIVAAdmin(admin.ModelAdmin):
-    list_display = (
-        'descrizione', 'valore_percentuale', 'attivo', 
-        'created_at', 'updated_at', 'created_by', 'updated_by'
-    )
-    list_filter = ('attivo',)
-    search_fields = ('descrizione',)
-    
-    # Usa exclude per nascondere i campi dal form
+    list_display = ('descrizione', 'valore_percentuale', 'attivo')
     exclude = ('created_by', 'updated_by')
-
     def save_model(self, request, obj, form, change):
-        # La nostra logica di salvataggio automatico rimane identica
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
 @admin.register(ModalitaPagamento)
 class ModalitaPagamentoAdmin(admin.ModelAdmin):
-    # Mostra tutte le informazioni utili nella lista
-    list_display = (
-        'descrizione', 
-        'giorni_scadenza', 
-        'attivo', 
-        'created_at', 
-        'updated_at', 
-        'created_by', 
-        'updated_by'
-    )
-    
-    # Aggiunge i filtri e la ricerca per una migliore navigazione
-    list_filter = ('attivo',)
-    search_fields = ('descrizione',)
-
-    # Esclude i campi di audit dal form per una UI pulita
+    list_display = ('descrizione', 'giorni_scadenza', 'attivo')
     exclude = ('created_by', 'updated_by')
-    
-    # Mantiene la logica di salvataggio automatico
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nome_cognome_ragione_sociale', 'partita_iva', 'codice_fiscale', 'citta', 'attivo')
+    list_display = ('nome_cognome_ragione_sociale', 'partita_iva', 'citta', 'attivo')
     search_fields = ('nome_cognome_ragione_sociale', 'partita_iva', 'codice_fiscale')
-    list_filter = ('attivo', 'citta')
     exclude = ('created_by', 'updated_by')
-
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
-
 
 @admin.register(Fornitore)
 class FornitoreAdmin(admin.ModelAdmin):
-    list_display = ('nome_cognome_ragione_sociale', 'partita_iva', 'codice_fiscale', 'citta', 'attivo')
+    list_display = ('nome_cognome_ragione_sociale', 'partita_iva', 'citta', 'attivo')
     search_fields = ('nome_cognome_ragione_sociale', 'partita_iva', 'codice_fiscale')
-    list_filter = ('attivo', 'citta')
     exclude = ('created_by', 'updated_by')
-
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-
 @admin.register(Dipendente)
 class DipendenteAdmin(admin.ModelAdmin):
-    list_display = ('nome_cognome_ragione_sociale', 'mansione', 'data_assunzione', 'attivo')
+    list_display = ('nome_cognome_ragione_sociale', 'mansione', 'attivo')
     search_fields = ('nome_cognome_ragione_sociale', 'mansione')
-    list_filter = ('attivo', 'mansione')
     exclude = ('created_by', 'updated_by')
-    
-    # Con fieldsets possiamo raggruppare i campi nel form
     fieldsets = (
-        ('Dati Anagrafici', {
-            'fields': (
-                'nome_cognome_ragione_sociale', 
-                ('codice_fiscale', 'partita_iva'),
-                'attivo'
-            )
-        }),
-        ('Dati di Contatto', {
-            'fields': ('indirizzo', 'cap', 'citta', 'provincia', 'email', 'telefono')
-        }),
-        ('Dati Lavorativi', {
-            'fields': ('mansione', 'data_assunzione', 'data_fine_rapporto', 'costo_orario', 'note_generali')
-        }),
+        ('Dati Anagrafici', {'fields': ('nome_cognome_ragione_sociale', ('codice_fiscale', 'partita_iva'), 'attivo')}),
+        ('Dati di Contatto', {'fields': ('indirizzo', 'cap', 'citta', 'provincia', 'email', 'telefono')}),
+        ('Dati Lavorativi', {'fields': ('mansione', 'data_assunzione', 'data_fine_rapporto', 'costo_orario', 'note_generali')}),
     )
-
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
 @admin.register(Cantiere)
 class CantiereAdmin(admin.ModelAdmin):
-    list_display = ('codice_cantiere', 'descrizione', 'cliente', 'stato', 'data_inizio')
+    list_display = ('codice_cantiere', 'descrizione', 'cliente', 'stato')
     search_fields = ('codice_cantiere', 'descrizione', 'cliente__nome_cognome_ragione_sociale')
-    list_filter = ('stato', 'cliente')
+    raw_id_fields = ('cliente',) # Migliora la selezione del cliente
     exclude = ('created_by', 'updated_by')
-    
-    fieldsets = (
-        ('Informazioni Principali', {
-            'fields': (
-                ('codice_cantiere', 'stato'),
-                'descrizione',
-                'cliente'
-            )
-        }),
-        ('Dettagli Logistici', {
-            'fields': ('indirizzo',)
-        }),
-        ('Date', {
-            'fields': ('data_inizio', 'data_fine_prevista', 'data_chiusura_effettiva')
-        }),
-    )
-
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-# --- Classi per Documenti (Versione Finale) ---
+# ==============================================================================
+# === DOCUMENTI (Logica avanzata)                                            ===
+# ==============================================================================
 
 class DocumentoRigaInline(admin.TabularInline):
     model = DocumentoRiga
@@ -148,133 +85,103 @@ class DocumentoRigaInline(admin.TabularInline):
 
 @admin.register(DocumentoTestata)
 class DocumentoTestataAdmin(admin.ModelAdmin):
-    # --- 1. CONFIGURAZIONE DELLA LISTA ---
-    # Aggiungiamo 'data_documento' e la rendiamo ordinabile di default.
-    # Specifichiamo che solo 'numero_documento' è il link al dettaglio.
-    list_display = ('numero_documento', 'tipo_documento','data_documento', 'contatto', 'stato', 'totale')
+    # --- 1. CONFIGURAZIONE LISTA ---
+    list_display = ('numero_documento', 'tipo_documento', 'data_documento', 'contatto', 'stato', 'totale')
     list_display_links = ('numero_documento',)
     list_filter = ('stato', 'tipo_documento', 'data_documento')
     search_fields = ('numero_documento', 'cliente__nome_cognome_ragione_sociale', 'fornitore__nome_cognome_ragione_sociale')
-    raw_id_fields = ('cliente', 'fornitore', 'cantiere')
-    readonly_fields = ('imponibile', 'iva', 'totale', 'created_at', 'updated_at', 'created_by', 'updated_by')
     inlines = [DocumentoRigaInline]
 
-    # --- 2. GESTIONE DINAMICA DEL FORM ---
-    # Questa classe dice a Django di caricare il nostro JavaScript.
+    # --- 2. CONFIGURAZIONE FORM ---
+    raw_id_fields = ('cliente', 'fornitore', 'cantiere')
+    # Campi che non devono mai essere modificati a mano nel form
+    readonly_fields = ('imponibile', 'iva', 'totale', 'created_at', 'updated_at', 'created_by', 'updated_by')
+
+    # Carica il nostro JavaScript per rendere il form dinamico
     class Media:
         js = ('admin/js/documento_form.js',)
         
-    # Questo metodo nasconde il campo 'numero_documento' SOLO quando creiamo un nuovo oggetto.
-    def get_fieldsets(self, request, obj=None):
-        base_fields = (
-            ('tipo_documento', 'stato'),
-            'data_documento',
-            'cliente',
-            'fornitore',
-            'cantiere',
-            'modalita_pagamento'
-        )
-        # Se stiamo modificando un oggetto esistente, mostriamo anche il suo numero
-        if obj:
-            base_fields = ('numero_documento',) + base_fields
-            
-        return (
-            ('Informazioni Principali', {'fields': base_fields}),
-            ('Riepilogo', {'classes': ('collapse',), 'fields': self.readonly_fields}),
-            ('Note', {'fields': ('note',)})
-        )
+    # Organizza i campi nel form
+    fieldsets = (
+        ('Informazioni Principali', {
+            'fields': (
+                ('tipo_documento', 'stato'),
+                ('numero_documento', 'data_documento'),
+                'cliente', 
+                'fornitore',
+                'cantiere', 
+                'modalita_pagamento'
+            )
+        }),
+        ('Riepilogo', {'classes': ('collapse',), 'fields': ('imponibile', 'iva', 'totale')}),
+        ('Note', {'fields': ('note',)}),
+    )
+
+    # --- 3. METODI PER LOGICA PERSONALIZZATA ---
     
+    # Metodo per mostrare il contatto corretto nella lista
+    @admin.display(description='Contatto')
+    def contatto(self, obj):
+        if obj.cliente: return obj.cliente
+        if obj.fornitore: return obj.fornitore
+        return "-"
+
+    # Rende il campo 'numero_documento' readonly solo in modifica
     def get_readonly_fields(self, request, obj=None):
-        # Se stiamo modificando un oggetto (obj esiste)...
-        if obj:
-            # ...restituisci la lista originale PIÙ 'numero_documento'
+        if obj: # Se stiamo modificando un oggetto
             return self.readonly_fields + ('numero_documento',)
-        # Altrimenti (in creazione), restituisci solo la lista originale
         return self.readonly_fields
 
+    # Logica di salvataggio per audit e numerazione automatica
     def save_model(self, request, obj, form, change):
-        # Logica di audit
         obj.updated_by = request.user
-        if not obj.pk:
+        if not obj.pk: # In creazione...
             obj.created_by = request.user
-        
-        doc_type = obj.tipo_documento
-        
-        # --- LOGICA DI NUMERAZIONE MIGLIORATA ---
-        if doc_type in [DocumentoTestata.TipoDocumento.FATTURA_VENDITA, DocumentoTestata.TipoDocumento.NOTA_CREDITO_VENDITA]:
-            # È un documento di vendita, la numerazione è AUTOMATICA
-            if not obj.pk: # Solo in creazione
+            doc_type = obj.tipo_documento
+            if doc_type in [DocumentoTestata.TipoDocumento.FATTURA_VENDITA, DocumentoTestata.TipoDocumento.NOTA_CREDITO_VENDITA]:
                 from django.utils import timezone
                 current_year = timezone.now().year
                 prefix = f"FT-{current_year}-" if doc_type == DocumentoTestata.TipoDocumento.FATTURA_VENDITA else f"NC-{current_year}-"
-                
-                last_doc = DocumentoTestata.objects.filter(
-                    tipo_documento=doc_type,
-                    data_documento__year=current_year
-                ).order_by('numero_documento').last()
-                
+                last_doc = DocumentoTestata.objects.filter(tipo_documento=doc_type, data_documento__year=current_year).order_by('numero_documento').last()
                 new_number = 1
                 if last_doc and last_doc.numero_documento.startswith(prefix):
                     try:
                         new_number = int(last_doc.numero_documento.replace(prefix, '')) + 1
-                    except (ValueError, IndexError):
-                        pass
+                    except (ValueError, IndexError): pass
                 obj.numero_documento = f"{prefix}{new_number:06d}"
-        else:
-            # È un documento di acquisto, il numero è MANUALE e OBBLIGATORIO
-            # Django solleverà un errore di validazione da solo
-            # se il campo viene lasciato vuoto, perché nel modello non ha blank=True.
-            # Normalizziamo solo l'input.
-            if obj.numero_documento:
-                obj.numero_documento = obj.numero_documento.upper()
+        
+        # Per i documenti di acquisto, normalizziamo il numero inserito manualmente
+        elif obj.numero_documento:
+            obj.numero_documento = obj.numero_documento.upper()
 
         super().save_model(request, obj, form, change)
 
-        # --- METODI HELPER (invariati ma necessari) ---
-        @admin.display(description='Contatto')
-        def contatto(self, obj):
-            if obj.cliente:
-                return obj.cliente
-            if obj.fornitore:
-                return obj.fornitore
-            return "-"
-            
-        def save_formset(self, request, form, formset, change):
-            formset.save()
-            testata = form.instance
-            testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga is not None)
-            testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga is not None)
-            testata.totale = testata.imponibile + testata.iva
-            testata.save()
-            super().save_formset(request, form, formset, change)
+    # Ricalcola i totali della testata dopo aver salvato le righe
+    def save_formset(self, request, form, formset, change):
+        formset.save()
+        testata = form.instance
+        testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga is not None)
+        testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga is not None)
+        testata.totale = testata.imponibile + testata.iva
+        testata.save()
+
+# ==============================================================================
+# === CONTABILITA' E TESORERIA                                               ===
+# ==============================================================================
 
 @admin.register(Scadenza)
 class ScadenzaAdmin(admin.ModelAdmin):
-    list_display = (
-        'data_scadenza', 
-        'anagrafica', 
-        'importo', 
-        'importo_residuo',
-        'stato', 
-        'documento',
-        'is_scaduta'
-    )
+    list_display = ('data_scadenza', 'anagrafica', 'importo', 'importo_residuo', 'stato', 'documento', 'is_scaduta')
     list_filter = ('stato', 'tipo_scadenza', 'data_scadenza')
-    search_fields = ('documento__numero_documento', 'anagrafica__nome_cognome_ragione_sociale')
-    list_display_links = ('data_scadenza', 'anagrafica')
-    
-    # Rendiamo i campi calcolati e relazionati non modificabili direttamente
+    search_fields = ('documento__numero_documento',)
     readonly_fields = ('importo_residuo', 'is_scaduta', 'created_at', 'updated_at', 'created_by', 'updated_by')
 
 @admin.register(ContoFinanziario)
 class ContoFinanziarioAdmin(admin.ModelAdmin):
     list_display = ('nome_conto', 'attivo')
-    search_fields = ('nome_conto',)
     exclude = ('created_by', 'updated_by')
-
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
@@ -282,12 +189,9 @@ class ContoFinanziarioAdmin(admin.ModelAdmin):
 class ContoOperativoAdmin(admin.ModelAdmin):
     list_display = ('nome_conto', 'tipo', 'attivo')
     list_filter = ('tipo', 'attivo')
-    search_fields = ('nome_conto',)
-    exclude = ('created_by', 'updated_by') 
-
+    exclude = ('created_by', 'updated_by')
     def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
+        if not obj.pk: obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
@@ -295,27 +199,8 @@ class ContoOperativoAdmin(admin.ModelAdmin):
 class PrimaNotaAdmin(admin.ModelAdmin):
     list_display = ('data', 'descrizione', 'importo', 'tipo_movimento', 'conto_finanziario', 'scadenza_collegata')
     list_filter = ('tipo_movimento', 'data', 'conto_finanziario')
-    search_fields = ('descrizione', 'scadenza_collegata__documento__numero_documento')
-    
-    # Usiamo raw_id_fields per selezionare facilmente la scadenza
     raw_id_fields = ('scadenza_collegata', 'anagrafica', 'cantiere')
-    
     fieldsets = (
-        ('Dati Principali', {
-            'fields': (
-                ('data', 'tipo_movimento'),
-                'descrizione',
-                ('importo', 'conto_finanziario')
-            )
-        }),
-        ('Collegamenti (Opzionali)', {
-            'classes': ('collapse',), # Sezione chiusa di default
-            'fields': (
-                'scadenza_collegata',
-                'conto_operativo',
-                'anagrafica',
-                'cantiere'
-            )
-        }),
+        ('Dati Principali', {'fields': (('data', 'tipo_movimento'),'descrizione',('importo', 'conto_finanziario'))}),
+        ('Collegamenti (Opzionali)', {'classes': ('collapse',),'fields': ('scadenza_collegata','conto_operativo','anagrafica','cantiere')}),
     )
-
