@@ -5,13 +5,25 @@ from core.models import PrimaNota, ContoFinanziario, Scadenza
 
 @login_required
 def dashboard_view(request):
-    scadenze_in_entrata = Scadenza.objects.filter(
+    return render(request, 'dashboard/dashboard.html')
+
+@login_required
+def scadenziario_incassi_view(request):
+    scadenze = Scadenza.objects.filter(
         tipo_scadenza=Scadenza.TipoScadenza.INCASSO,
         stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE]
-    ).order_by('data_scadenza')[:10]
+    ).order_by('data_scadenza')
+    context = {'scadenze': scadenze, 'titolo': 'Scadenziario Incassi'}
+    return render(request, 'dashboard/scadenziario_list.html', context)
 
-    context = {'scadenze_in_entrata': scadenze_in_entrata}
-    return render(request, 'dashboard/dashboard.html', context)
+@login_required
+def scadenziario_pagamenti_view(request):
+    scadenze = Scadenza.objects.filter(
+        tipo_scadenza=Scadenza.TipoScadenza.PAGAMENTO,
+        stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE]
+    ).order_by('data_scadenza')
+    context = {'scadenze': scadenze, 'titolo': 'Scadenziario Pagamenti'}
+    return render(request, 'dashboard/scadenziario_list.html', context)
 
 @login_required
 def registra_pagamento_form(request, scadenza_id):

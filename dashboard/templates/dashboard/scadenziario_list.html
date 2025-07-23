@@ -1,0 +1,37 @@
+<!-- in dashboard/templates/dashboard/scadenziario_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ titolo }} - GestionarioWEB{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">{{ titolo }}</h1>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data Scadenza</th>
+                            <th>Contatto</th>
+                            <th>Rif. Documento</th>
+                            <th class="text-end">Importo Residuo</th>
+                            <th class="text-center">Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scadenza in scadenze %}
+                            {% include 'dashboard/partials/riga_scadenza.html' %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Nessuna scadenza da visualizzare.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

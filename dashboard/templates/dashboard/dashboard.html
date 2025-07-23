@@ -1,36 +1,12 @@
+<!-- in dashboard/templates/dashboard/dashboard.html -->
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - GestionarioWEB{% endblock %}
+{% block title %}Dashboard - (c) Lubrano){% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="mb-4">Scadenziario Incassi</h1>
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Data Scadenza</th>
-                            <th>Contatto</th>
-                            <th>Rif. Documento</th>
-                            <th class="text-end">Importo Residuo</th>
-                            <th class="text-center">Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for scadenza in scadenze_in_entrata %}
-                            {% include 'dashboard/partials/riga_scadenza.html' %}
-                        {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">Nessuna scadenza in entrata.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <h1 class="mb-4">Centro di Controllo Operativo</h1>
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Work in Progress!</h4>
+        <p>Questa dashboard è in fase di costruzione e presto mostrerà i principali indicatori di performance (KPI) e i dati aggregati dell'azienda.</p>
     </div>
-</div>
 {% endblock %}

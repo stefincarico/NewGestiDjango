@@ -151,7 +151,7 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
     # --- 1. CONFIGURAZIONE DELLA LISTA ---
     # Aggiungiamo 'data_documento' e la rendiamo ordinabile di default.
     # Specifichiamo che solo 'numero_documento' è il link al dettaglio.
-    list_display = ('numero_documento', 'data_documento', 'contatto', 'stato', 'totale')
+    list_display = ('numero_documento', 'tipo_documento','data_documento', 'contatto', 'stato', 'totale')
     list_display_links = ('numero_documento',)
     list_filter = ('stato', 'tipo_documento', 'data_documento')
     search_fields = ('numero_documento', 'cliente__nome_cognome_ragione_sociale', 'fornitore__nome_cognome_ragione_sociale')
@@ -192,30 +192,22 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         # Altrimenti (in creazione), restituisci solo la lista originale
         return self.readonly_fields
 
-    # --- 3. LOGICA DI SALVATAGGIO E NUMERAZIONE ---
     def save_model(self, request, obj, form, change):
-        # La logica di audit viene eseguita sempre
+        # Logica di audit
         obj.updated_by = request.user
-        
-        # La logica di creazione/numerazione viene eseguita solo per i nuovi oggetti
         if not obj.pk:
             obj.created_by = request.user
-            
-            from django.utils import timezone
-            current_year = timezone.now().year
-            
-            doc_type = obj.tipo_documento
-            prefix = ""
-            
-            # Determina il prefisso in base al tipo di documento
-            if doc_type == DocumentoTestata.TipoDocumento.FATTURA_VENDITA:
-                prefix = f"FT-{current_year}-"
-            elif doc_type == DocumentoTestata.TipoDocumento.NOTA_CREDITO_VENDITA:
-                prefix = f"NC-{current_year}-"
-
-            # Se è un tipo di documento che richiede numerazione automatica...
-            if prefix:
-                # Trova l'ultimo documento dello stesso tipo e dello stesso anno
+        
+        doc_type = obj.tipo_documento
+        
+        # --- LOGICA DI NUMERAZIONE MIGLIORATA ---
+        if doc_type in [DocumentoTestata.TipoDocumento.FATTURA_VENDITA, DocumentoTestata.TipoDocumento.NOTA_CREDITO_VENDITA]:
+            # È un documento di vendita, la numerazione è AUTOMATICA
+            if not obj.pk: # Solo in creazione
+                from django.utils import timezone
+                current_year = timezone.now().year
+                prefix = f"FT-{current_year}-" if doc_type == DocumentoTestata.TipoDocumento.FATTURA_VENDITA else f"NC-{current_year}-"
+                
                 last_doc = DocumentoTestata.objects.filter(
                     tipo_documento=doc_type,
                     data_documento__year=current_year
@@ -224,33 +216,37 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
                 new_number = 1
                 if last_doc and last_doc.numero_documento.startswith(prefix):
                     try:
-                        last_number_str = last_doc.numero_documento.replace(prefix, '')
-                        new_number = int(last_number_str) + 1
+                        new_number = int(last_doc.numero_documento.replace(prefix, '')) + 1
                     except (ValueError, IndexError):
-                        new_number = 1
-                
+                        pass
                 obj.numero_documento = f"{prefix}{new_number:06d}"
-        
-        # Infine, chiama il metodo di salvataggio originale
+        else:
+            # È un documento di acquisto, il numero è MANUALE e OBBLIGATORIO
+            # Django solleverà un errore di validazione da solo
+            # se il campo viene lasciato vuoto, perché nel modello non ha blank=True.
+            # Normalizziamo solo l'input.
+            if obj.numero_documento:
+                obj.numero_documento = obj.numero_documento.upper()
+
         super().save_model(request, obj, form, change)
 
-    # --- METODI HELPER (invariati ma necessari) ---
-    @admin.display(description='Contatto')
-    def contatto(self, obj):
-        if obj.cliente:
-            return obj.cliente
-        if obj.fornitore:
-            return obj.fornitore
-        return "-"
-        
-    def save_formset(self, request, form, formset, change):
-        formset.save()
-        testata = form.instance
-        testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga is not None)
-        testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga is not None)
-        testata.totale = testata.imponibile + testata.iva
-        testata.save()
-        super().save_formset(request, form, formset, change)
+        # --- METODI HELPER (invariati ma necessari) ---
+        @admin.display(description='Contatto')
+        def contatto(self, obj):
+            if obj.cliente:
+                return obj.cliente
+            if obj.fornitore:
+                return obj.fornitore
+            return "-"
+            
+        def save_formset(self, request, form, formset, change):
+            formset.save()
+            testata = form.instance
+            testata.imponibile = sum(r.imponibile_riga for r in testata.righe.all() if r.imponibile_riga is not None)
+            testata.iva = sum(r.iva_riga for r in testata.righe.all() if r.iva_riga is not None)
+            testata.totale = testata.imponibile + testata.iva
+            testata.save()
+            super().save_formset(request, form, formset, change)
 
 @admin.register(Scadenza)
 class ScadenzaAdmin(admin.ModelAdmin):
