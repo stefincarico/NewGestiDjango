@@ -1,0 +1,25 @@
+<tr id="scadenza-row-{{ scadenza.id }}">
+    <td>{{ scadenza.data_scadenza|date:"d/m/Y" }}</td>
+    <td>{{ scadenza.anagrafica }}</td>
+    <td>{{ scadenza.documento.numero_documento }}</td>
+    <td class="text-end fw-bold">{{ scadenza.importo_residuo }} €</td>
+    <td class="text-center">
+        <span class="badge 
+            {% if scadenza.stato == 'Aperta' %}bg-warning text-dark
+            {% elif scadenza.stato == 'Parziale' %}bg-info text-dark
+            {% elif scadenza.stato == 'Saldata' %}bg-success
+            {% endif %}">
+            {{ scadenza.get_stato_display }}
+        </span>
+    </td>
+    <td>
+        {% if scadenza.stato != 'Saldata' %}
+        <button class="btn btn-sm btn-primary"
+                hx-get="{% url 'registra_pagamento_form' scadenza.id %}"
+                hx-target="#scadenza-row-{{ scadenza.id }}"
+                hx-swap="outerHTML">
+            Paga
+        </button>
+        {% endif %}
+    </td>
+</tr>

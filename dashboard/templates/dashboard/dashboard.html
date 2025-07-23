@@ -1,4 +1,3 @@
-<!-- in dashboard/templates/dashboard/dashboard.html -->
 {% extends 'base.html' %}
 
 {% block title %}Dashboard - GestionarioWEB{% endblock %}
@@ -20,11 +19,9 @@
                             <th>Azioni</th>
                         </tr>
                     </thead>
-                    <tbody hx-target="closest tr" hx-swap="outerHTML">
+                    <tbody>
                         {% for scadenza in scadenze_in_entrata %}
-                            <tr id="scadenza-row-{{ scadenza.id }}">
-                                {% include 'dashboard/partials/riga_scadenza_content.html' %}
-                            </tr>
+                            {% include 'dashboard/partials/riga_scadenza.html' %}
                         {% empty %}
                             <tr>
                                 <td colspan="6" class="text-center text-muted">Nessuna scadenza in entrata.</td>
