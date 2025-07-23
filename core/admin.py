@@ -106,7 +106,7 @@ class DocumentoTestataAdmin(admin.ModelAdmin):
         ('Informazioni Principali', {
             'fields': (
                 ('tipo_documento', 'stato'),
-                ('numero_documento', 'data_documento'),
+                ('data_documento'),
                 'cliente', 
                 'fornitore',
                 'cantiere', 
