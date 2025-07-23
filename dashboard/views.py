@@ -139,30 +139,25 @@ def get_scadenza_row(request, scadenza_id):
 
 @login_required
 def scadenziario_view(request):
-    # Logica di base: prendi tutte le scadenze aperte
     scadenze_list = Scadenza.objects.filter(
         stato__in=[Scadenza.StatoScadenza.APERTA, Scadenza.StatoScadenza.PAGATA_PARZIALMENTE]
-    ).select_related('documento', 'anagrafica').order_by('data_scadenza')
+    ).select_related('documento').prefetch_related('anagrafica').order_by('data_scadenza')
 
-    # --- Qui in futuro inseriremo la logica di filtro basata su request.GET ---
-    
-    # --- Calcolo KPI per l'header della pagina ---
+    # --- Calcolo KPI con la logica corretta a livello di DB ---
     kpi = scadenze_list.aggregate(
-        tot_incassi=Coalesce(Sum('importo', filter=Q(tipo_scadenza='Incasso')), 0, output_field=DecimalField()),
-        tot_pagamenti=Coalesce(Sum('importo', filter=Q(tipo_scadenza='Pagamento')), 0, output_field=DecimalField())
+        tot_incassi=Coalesce(Sum(F('importo') - F('importo_pagato'), filter=Q(tipo_scadenza='Incasso')), 0, output_field=DecimalField()),
+        tot_pagamenti=Coalesce(Sum(F('importo') - F('importo_pagato'), filter=Q(tipo_scadenza='Pagamento')), 0, output_field=DecimalField())
     )
     kpi['saldo_circolante'] = kpi['tot_incassi'] - kpi['tot_pagamenti']
 
-    # --- Logica di Paginazione ---
-    paginator = Paginator(scadenze_list, 15) # 15 scadenze per pagina
+    # --- Logica di Paginazione (invariata) ---
+    paginator = Paginator(scadenze_list, 15)
     page_number = request.GET.get('page')
     try:
         scadenze_page = paginator.page(page_number)
     except PageNotAnInteger:
-        # Se page non è un intero, mostra la prima pagina
         scadenze_page = paginator.page(1)
     except EmptyPage:
-        # Se page è fuori range, mostra l'ultima pagina di risultati
         scadenze_page = paginator.page(paginator.num_pages)
 
     context = {

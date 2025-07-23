@@ -77,48 +77,33 @@
                 </div>
             </div>
         </div>
-        <!-- Widget Scadenze Incassi -->
-        <div class="card h-100 shadow-sm mb-3">
-            <div class="card-header"><h5 class="mb-0">Incassi Imminenti</h5></div>
-            <table class="table table-sm mb-0">
-                <tbody>
-                    {% for scadenza in scadenze_imminenti %}
-                        <tr>
-                            <td>{{ scadenza.data_scadenza|date:"d/m" }}</td>
-                            <td>{{ scadenza.anagrafica }}</td>
-                            <td class="text-end">{{ scadenza.importo_residuo|floatformat:2|intcomma }} €</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td class="text-center text-muted">Nessun incasso imminente.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="card-footer text-end py-1">
-                <a href="{% url 'scadenziario_incassi' %}">Tutti gli Incassi →</a>
-            </div>
-        </div>
-
-        <!-- Widget Scadenze Pagamenti -->
-        <div class="card h-100 shadow-sm">
-            <div class="card-header"><h5 class="mb-0">Pagamenti Imminenti</h5></div>
-            <table class="table table-sm mb-0">
-                <tbody>
-                    {% for scadenza in scadenze_pagamenti_imminenti %}
-                        <tr>
-                            <td>{{ scadenza.data_scadenza|date:"d/m" }}</td>
-                            <td>{{ scadenza.anagrafica }}</td>
-                            <td class="text-end text-danger fw-bold">{{ scadenza.importo_residuo|floatformat:2|intcomma }} €</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td class="text-center text-muted">Nessun pagamento imminente.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="card-footer text-end py-1">
-                <a href="{% url 'scadenziario_pagamenti' %}">Tutti i Pagamenti →</a>
+        <!-- Widget Scadenze Imminenti (Unificato) -->
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Scadenze Imminenti (Incassi e Pagamenti)</h5>
+                </div>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for scadenza in scadenze_imminenti %}
+                            <tr>
+                                <td>{{ scadenza.data_scadenza|date:"d/m" }}</td>
+                                <td>{{ scadenza.anagrafica }}</td>
+                                <!-- Colora il residuo in rosso se è un pagamento -->
+                                <td class="text-end {% if scadenza.tipo_scadenza == 'Pagamento' %}text-danger fw-bold{% endif %}">
+                                    {{ scadenza.importo_residuo|floatformat:2|intcomma }} €
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td class="text-center text-muted">Nessuna scadenza imminente.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="card-footer text-end py-1">
+                    <!-- IL LINK CORRETTO E UNIFICATO -->
+                    <a href="{% url 'scadenziario' %}">Vai allo Scadenziario Completo →</a>
+                </div>
             </div>
         </div>
     </div>
-    </div>
-
 {% endblock %}
